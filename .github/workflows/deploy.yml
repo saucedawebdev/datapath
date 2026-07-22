@@ -41,6 +41,11 @@ jobs:
           test ! -d dist/src
           ! grep -q 'src="/src/main.js"' dist/index.html
 
+      - name: Verify PWA manifest and home-screen launch config
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+        run: node scripts/verify-pwa-deploy.js
+
       - name: Publish dist to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -48,3 +53,12 @@ jobs:
           publish_dir: ./dist
           publish_branch: gh-pages
           force_orphan: true
+
+      - name: Verify live PWA home-screen launch URL
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+          DEPLOY_URL: https://saucedawebdev.github.io/${{ github.event.repository.name }}/
+          VERIFY_LIVE: '1'
+        run: |
+          sleep 45
+          node scripts/verify-pwa-deploy.js

@@ -3,6 +3,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
 
 const base = process.env.BASE_PATH || '/';
+const withBase = (path) => `${base}${path}`.replace(/\/{2,}/g, '/');
 
 export default defineConfig({
   base,
@@ -24,6 +25,7 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'prompt',
+      scope: base,
       includeAssets: ['icons/*.png', 'icons/*.svg'],
       manifest: {
         name: 'DATApath — Job Ready Edition',
@@ -32,18 +34,32 @@ export default defineConfig({
         theme_color: '#22d3ee',
         background_color: '#0a0f1a',
         display: 'standalone',
+        id: base,
+        scope: base,
         start_url: base,
         icons: [
-          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: withBase('icons/icon-192.png'),
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+          {
+            src: withBase('icons/icon-512.png'),
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
         ],
       },
       workbox: {
-        cacheId: 'datapath-job-ready-v1',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm}'],
+        cacheId: 'datapath-job-ready-v2',
+        cleanupOutdatedCaches: true,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm,webmanifest}'],
         globIgnores: ['**/sql-asm*.js', '**/*-debug*.js', '**/worker.sql*.js'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        navigateFallback: `${base}index.html`.replace('//', '/'),
+        navigateFallback: withBase('index.html'),
+        navigateFallbackDenylist: [/^\/_/, /\/[^/?]+\.[^/]+$/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

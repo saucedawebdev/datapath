@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test tests/e2e/qa.spec.js",
-    "validate:content": "node scripts/validate-content.js"
+    "validate:content": "node scripts/validate-content.js",
+    "verify:pwa": "node scripts/verify-pwa-deploy.js"
   },
   "dependencies": {
     "@codemirror/commands": "^6.8.0",
