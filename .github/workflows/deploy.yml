@@ -6,40 +6,43 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
+
       - run: npm ci
       - run: npm run validate:content
       - run: npm test
-      - name: Build for GitHub Pages
+
+      - name: Build for GitHub Pages (project site)
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Verify dist uses repository base path (not source /src)
+        run: |
+          grep -q "/${{ github.event.repository.name }}/assets/" dist/index.html
+          grep -q "/${{ github.event.repository.name }}/assets/main-" dist/index.html
+          test ! -d dist/src
+          ! grep -q 'src="/src/main.js"' dist/index.html
+
+      - name: Publish dist to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          force_orphan: true

@@ -39,6 +39,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        cacheId: 'datapath-job-ready-v1',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm}'],
         globIgnores: ['**/sql-asm*.js', '**/*-debug*.js', '**/worker.sql*.js'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
