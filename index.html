@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DATApath Job Ready Edition — 114 lessons across SQL, Excel, Tableau, Power BI, Python, and Statistics" />
+    <meta name="theme-color" content="#22d3ee" />
+    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <title>DATApath — Job Ready Edition</title>
+    <script>
+      (function () {
+        try {
+          var prefs = JSON.parse(localStorage.getItem('datapath-prefs') || '{}');
+          var theme = prefs.theme || 'dark';
+          var resolved = theme === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : theme;
+          document.documentElement.setAttribute('data-theme', resolved);
+          if (prefs.fontSize) document.documentElement.setAttribute('data-font-size', prefs.fontSize);
+          if (prefs.reducedMotion) document.documentElement.setAttribute('data-reduced-motion', 'true');
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <div id="app" class="app-root" aria-live="polite"></div>
+    <div id="toast-region" class="toast-region" role="region" aria-label="Notifications" aria-live="polite"></div>
+    <div id="dialog-root"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

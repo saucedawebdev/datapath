@@ -1,0 +1,197 @@
+import { buildSubject, CONTENT_STATUS } from './build-curriculum.js';
+
+/** Existing complete SQL lessons — preserve IDs for progress tracking. */
+const SQL_STATUS = {
+  'sql-lesson-intro-databases': CONTENT_STATUS.COMPLETE,
+  'sql-lesson-select-basics': CONTENT_STATUS.COMPLETE,
+  'sql-lesson-where-filtering': CONTENT_STATUS.COMPLETE,
+  'sql-lesson-order-by-limit': CONTENT_STATUS.COMPLETE,
+  'sql-lesson-distinct-aliases': CONTENT_STATUS.COMPLETE,
+  'sql-lesson-aggregate-functions': CONTENT_STATUS.COMPLETE,
+  'sql-lesson-group-by': CONTENT_STATUS.COMPLETE,
+  'sql-lesson-inner-join': CONTENT_STATUS.COMPLETE,
+};
+
+const SQL_ID = {
+  'What Is a Database?': 'sql-lesson-intro-databases',
+  'SELECT Basics': 'sql-lesson-select-basics',
+  'WHERE': 'sql-lesson-where-filtering',
+  'LIMIT and TOP': 'sql-lesson-order-by-limit',
+  'DISTINCT': 'sql-lesson-distinct-aliases',
+  'Multiple Aggregations': 'sql-lesson-aggregate-functions',
+  'GROUP BY': 'sql-lesson-group-by',
+  'INNER JOIN': 'sql-lesson-inner-join',
+};
+
+const SQL_MODULE_ID = {
+  'Database Fundamentals': 'sql-module-fundamentals',
+  'Querying Data': 'sql-module-querying',
+  'Aggregate Analysis': 'sql-module-aggregates',
+  'Joins': 'sql-module-joins',
+};
+
+export const sqlSubject = buildSubject({
+  id: 'sql',
+  name: 'SQL',
+  order: 1,
+  description: 'Learn to query, transform, and analyze relational data using SQL — the foundation of data analytics.',
+  idOverrides: SQL_ID,
+  moduleIdOverrides: SQL_MODULE_ID,
+  statusOverrides: SQL_STATUS,
+  modules: [
+    {
+      name: 'Database Fundamentals',
+      description: 'Understand tables, rows, columns, schemas, and how businesses store data.',
+      lessons: [
+        'What Is a Database?',
+        'Tables, Rows, and Columns',
+        'Data Types and Schemas',
+        'Relational Databases',
+        'Primary Keys',
+        'Foreign Keys',
+        'Table Relationships',
+        'Constraints',
+        'NULL Values',
+      ],
+    },
+    {
+      name: 'Querying Data',
+      description: 'Retrieve and filter data with SELECT, WHERE, and sorting.',
+      lessons: [
+        'SELECT Basics',
+        'Selecting Specific Columns',
+        'DISTINCT',
+        'Aliases',
+        'WHERE',
+        'Comparison Operators',
+        'AND, OR, and NOT',
+        'IN',
+        'BETWEEN',
+        'LIKE',
+        'IS NULL',
+        'ORDER BY',
+        'LIMIT and TOP',
+      ],
+    },
+    {
+      name: 'Aggregate Analysis',
+      lessons: [
+        'COUNT',
+        'SUM',
+        'AVG',
+        'MIN and MAX',
+        'GROUP BY',
+        'HAVING',
+        'Multiple Aggregations',
+        'Conditional Aggregation',
+        'CASE Expressions',
+      ],
+    },
+    {
+      name: 'Working with Text, Numbers, and Dates',
+      lessons: [
+        'String Functions',
+        'Concatenation',
+        'Text Cleaning',
+        'Numeric Functions',
+        'Date Functions',
+        'Date Differences',
+        'Extracting Date Parts',
+        'Working with Timestamps',
+      ],
+    },
+    {
+      name: 'Joins',
+      lessons: [
+        'INNER JOIN',
+        'LEFT JOIN',
+        'RIGHT JOIN',
+        'FULL OUTER JOIN',
+        'CROSS JOIN',
+        'Self Joins',
+        'Joining Multiple Tables',
+        'Join Keys',
+        'Duplicate Rows After Joins',
+        'Troubleshooting Joins',
+      ],
+    },
+    {
+      name: 'Subqueries and CTEs',
+      lessons: [
+        'Basic Subqueries',
+        'Subqueries in WHERE',
+        'Subqueries in FROM',
+        'Correlated Subqueries',
+        'Common Table Expressions',
+        'Multiple CTEs',
+        'Recursive CTE Fundamentals',
+      ],
+    },
+    {
+      name: 'Set Operations',
+      lessons: ['UNION', 'UNION ALL', 'INTERSECT', 'EXCEPT'],
+    },
+    {
+      name: 'Window Functions',
+      lessons: [
+        'Window Function Fundamentals',
+        'OVER',
+        'PARTITION BY',
+        'ORDER BY in Windows',
+        'ROW_NUMBER',
+        'RANK',
+        'DENSE_RANK',
+        'Running Totals',
+        'Moving Averages',
+        'LAG',
+        'LEAD',
+        'FIRST_VALUE',
+        'LAST_VALUE',
+      ],
+    },
+    {
+      name: 'Data Modification',
+      lessons: ['INSERT', 'UPDATE', 'DELETE', 'Transactions', 'COMMIT and ROLLBACK'],
+    },
+    {
+      name: 'Database Objects',
+      lessons: ['CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 'Views', 'Index Fundamentals'],
+    },
+    {
+      name: 'Data Cleaning with SQL',
+      lessons: [
+        'Finding Duplicates',
+        'Removing Duplicates',
+        'Handling Missing Values',
+        'Standardizing Text',
+        'Converting Data Types',
+        'Cleaning Dates',
+      ],
+    },
+    {
+      name: 'Business Analysis with SQL',
+      lessons: [
+        'Sales Analysis',
+        'Customer Analysis',
+        'Product Analysis',
+        'Marketing Analysis',
+        'Funnel Analysis',
+        'Churn Analysis',
+        'Cohort Analysis',
+        'Retention Analysis',
+      ],
+    },
+    {
+      name: 'Advanced SQL',
+      lessons: [
+        'Query Execution Order',
+        'Query Optimization Fundamentals',
+        'Reading Query Plans',
+        'Indexing Concepts',
+        'Advanced CASE Patterns',
+        'Advanced Window Patterns',
+        'SQL Interview Challenges',
+      ],
+    },
+  ],
+});

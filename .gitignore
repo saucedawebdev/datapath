@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.playwright-browsers/
+playwright-report/
+test-results/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+.content-validated
+.vscode/
+.cursor/
+.idea/
+*.swp
+*.swo
+coverage/
