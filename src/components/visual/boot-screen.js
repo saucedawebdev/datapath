@@ -4,7 +4,7 @@ export async function runBootScreen({ steps = [], maxMs = 1800 } = {}) {
   const reduced = document.documentElement.getAttribute('data-reduced-motion') === 'true'
     || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (sessionStorage.getItem(BOOT_KEY) === '1' || reduced) {
+  if (sessionStorage.getItem(BOOT_KEY) === '1' || reduced || navigator.webdriver) {
     return;
   }
 

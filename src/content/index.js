@@ -84,6 +84,23 @@ export function getAdjacentLessons(lessonId) {
   };
 }
 
+/** Lesson index within its subject (1-based) and total count. */
+export function getLessonPosition(lessonId) {
+  const lesson = getLesson(lessonId);
+  if (!lesson) return null;
+  let index = 0;
+  let totalInSubject = 0;
+  const subject = getSubject(lesson.subjectId);
+  if (!subject) return null;
+  for (const mod of subject.modules) {
+    for (const l of mod.lessons) {
+      totalInSubject += 1;
+      if (l.id === lessonId) index = totalInSubject;
+    }
+  }
+  return index ? { index, totalInSubject, moduleName: getModule(lesson.subjectId, lesson.moduleId)?.name } : null;
+}
+
 export function getReference(id) {
   return references.find((r) => r.id === id);
 }

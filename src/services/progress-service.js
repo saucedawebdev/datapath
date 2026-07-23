@@ -144,3 +144,30 @@ export function findContinueLearning(subjects, progressMap) {
   }
   return null;
 }
+
+/**
+ * Prefer the most recently active incomplete lesson from activity log.
+ */
+export function findContinueLearningFromActivity(subjects, progressMap, activity = []) {
+  const lessonActivityTypes = new Set(['lesson-view', 'lesson-complete', 'quiz-attempt', 'practice-complete']);
+  for (const entry of activity) {
+    if (!entry.itemId || !lessonActivityTypes.has(entry.type)) continue;
+    const lesson = findLessonInSubjects(subjects, entry.itemId);
+    if (lesson && !progressMap[lesson.id]?.complete) {
+      const subject = subjects.find((s) => s.id === lesson.subjectId);
+      const module = subject?.modules.find((m) => m.id === lesson.moduleId);
+      if (subject && module) return { subject, module, lesson };
+    }
+  }
+  return findContinueLearning(subjects, progressMap);
+}
+
+function findLessonInSubjects(subjects, lessonId) {
+  for (const subject of subjects) {
+    for (const mod of subject.modules) {
+      const lesson = mod.lessons.find((l) => l.id === lessonId);
+      if (lesson) return { ...lesson, subjectId: subject.id, moduleId: mod.id };
+    }
+  }
+  return null;
+}

@@ -7,6 +7,9 @@ const BASE = process.env.QA_BASE_URL || 'http://localhost:5173';
 
 test.describe('DATApath Job Ready Edition', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      sessionStorage.setItem('datapath-boot-seen', '1');
+    });
     await page.goto(BASE);
     await page.evaluate(async () => {
       indexedDB.deleteDatabase('datapath-db');
@@ -14,6 +17,11 @@ test.describe('DATApath Job Ready Edition', () => {
     });
     await page.reload();
     await page.waitForSelector('#main-content', { timeout: 15000 });
+    const onboardingSkip = page.locator('#welcome-onboarding').getByRole('button', { name: 'Skip' });
+    if (await onboardingSkip.isVisible().catch(() => false)) {
+      await onboardingSkip.click();
+      await page.locator('#welcome-onboarding').waitFor({ state: 'detached', timeout: 5000 });
+    }
   });
 
   test('loads dashboard with hero tagline', async ({ page }) => {
@@ -37,7 +45,9 @@ test.describe('DATApath Job Ready Edition', () => {
   test('lesson completion persists', async ({ page }) => {
     await page.goto(`${BASE}#/lesson/sql-lesson-select-basics`);
     await page.getByRole('button', { name: 'Mark complete' }).click();
-    await page.waitForSelector('text=Completed');
+    await page.locator('.completion-celebration').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    await page.keyboard.press('Escape').catch(() => {});
+    await expect(page.locator('.badge--complete')).toContainText('Completed');
     await page.reload();
     await expect(page.locator('.badge--complete')).toContainText('Completed');
   });

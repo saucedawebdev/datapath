@@ -191,6 +191,27 @@ class StorageService {
     });
   }
 
+  async logLessonView(lessonId, subjectId) {
+    await this.logActivity({ type: 'lesson-view', itemId: lessonId, subjectId });
+  }
+
+  async getProjectProgress(projectId) {
+    return this.provider.get(STORES.PROJECT_PROGRESS, projectId);
+  }
+
+  async getAllProjectProgress() {
+    return this.provider.getAll(STORES.PROJECT_PROGRESS);
+  }
+
+  async setProjectProgress(projectId, { complete = false, inProgress = true } = {}) {
+    await this.provider.put(STORES.PROJECT_PROGRESS, {
+      id: projectId,
+      complete,
+      inProgress: complete ? false : inProgress,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
   async getRecentActivity(limit = 20) {
     const all = await this.provider.getAll(STORES.ACTIVITY);
     return all.sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, limit);

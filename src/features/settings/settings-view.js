@@ -6,6 +6,7 @@ import { branding } from '../../config/branding.js';
 import { createButton } from '../../components/ui.js';
 import { showToast, showDialog } from '../../components/toast-dialog.js';
 import { escapeHtml } from '../../utilities/sanitize.js';
+import { showWelcomeOnboarding } from '../../components/welcome-onboarding.js';
 
 export async function renderSettings() {
   const prefs = await storage.getPreferences();
@@ -68,6 +69,12 @@ export async function renderSettings() {
     </section>
 
     <section class="card mb-lg">
+      <h2>Help</h2>
+      <p class="text-secondary mb-sm">Replay the welcome guide if you want a quick orientation to DATApath.</p>
+      <div id="help-actions"></div>
+    </section>
+
+    <section class="card mb-lg">
       <h2>Data Backup</h2>
       <p class="text-secondary">Export all progress, notes, bookmarks, and preferences to a JSON file. Import restores data locally — nothing is sent to a server.</p>
       <div class="flex flex-wrap gap-sm" id="backup-actions"></div>
@@ -96,6 +103,12 @@ export async function renderSettings() {
     variant: 'primary',
     onClick: savePreferences,
   });
+  form.querySelector('#help-actions').appendChild(createButton({
+    label: 'Show welcome guide',
+    variant: 'secondary',
+    onClick: () => showWelcomeOnboarding({ hasProgress: false }),
+  }));
+
   form.querySelector('#backup-actions').appendChild(createButton({
     label: 'Export backup',
     variant: 'secondary',

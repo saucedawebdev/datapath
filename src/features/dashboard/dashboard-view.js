@@ -3,7 +3,7 @@ import { storage } from '../../storage/storage-service.js';
 import {
   buildSubjectProgress,
   calculateOverallProgress,
-  findContinueLearning,
+  findContinueLearningFromActivity,
   identifyWeakSkills,
 } from '../../services/progress-service.js';
 import { contentBundle, getAllLessonRefs, getLesson, getExercise } from '../../content/index.js';
@@ -20,6 +20,9 @@ import { createMetricCard } from '../../components/visual/metric-card.js';
 import { createDashboardChart } from '../../components/visual/dashboard-chart.js';
 import { createSubjectCapabilityCard } from '../../components/visual/subject-capability-card.js';
 import { animateKpiValue } from '../../components/visual/animated-kpi.js';
+import { createContinueLearningCard } from '../../components/continue-learning-card.js';
+import { createProjectCard } from '../../components/project-card.js';
+import { maybeShowWelcomeOnboarding } from '../../components/welcome-onboarding.js';
 
 export async function renderDashboard() {
   const fragment = document.createDocumentFragment();
@@ -38,8 +41,14 @@ export async function renderDashboard() {
     contentBundle.subjects.map((s) => buildSubjectProgress(s, contentBundle, storage)),
   );
   const overallProgress = calculateOverallProgress(subjectProgressList);
-  const continueTarget = findContinueLearning(contentBundle.subjects, progressMap);
   const completedCount = allProgress.filter((p) => p.complete).length;
+  const continueTargetRaw = findContinueLearningFromActivity(contentBundle.subjects, progressMap, activity);
+  const hasProgress = completedCount > 0;
+  let continueTarget = continueTargetRaw;
+  if (continueTargetRaw) {
+    const sp = subjectProgressList.find((s) => s.subjectId === continueTargetRaw.subject.id);
+    continueTarget = { ...continueTargetRaw, subjectProgress: sp };
+  }
   const systemStatus = await getAnalyticsSystemStatus();
   const northstar = getNorthstarMetrics();
   const achievements = computeVerifiedAchievements({
@@ -60,6 +69,9 @@ export async function renderDashboard() {
     projectsCompleted,
   });
   const greeting = getTimeGreeting(prefs.displayName);
+  const allProjectProgress = await storage.getAllProjectProgress();
+  const projectProgressMap = Object.fromEntries(allProjectProgress.map((p) => [p.id, p]));
+  const nextProject = contentBundle.projects.find((p) => !projectProgressMap[p.id]?.complete) || contentBundle.projects[0];
 
   const heroContent = document.createElement('div');
   heroContent.innerHTML = `
@@ -75,26 +87,10 @@ export async function renderDashboard() {
   statusPanel.classList.add('glass-panel');
   heroMeta.appendChild(statusPanel);
 
-  const hero = createHeroShell({ className: 'dashboard-hero mb-lg', children: [heroContent] });
+  const hero = createHeroShell({ className: 'dashboard-hero mb-md', children: [heroContent] });
   fragment.appendChild(hero);
 
-  const continueCard = createCard({
-    title: 'Continue Learning',
-    subtitle: continueTarget
-      ? `${continueTarget.subject.name} · ${continueTarget.lesson.title}`
-      : 'All 114 lessons complete — explore capstone projects.',
-    className: 'mb-lg',
-    children: [
-      continueTarget
-        ? createLinkButton({
-            label: `Continue: ${continueTarget.lesson.title}`,
-            href: `#/lesson/${continueTarget.lesson.id}`,
-            variant: 'primary',
-          })
-        : createLinkButton({ label: 'Browse Projects', href: '#/projects', variant: 'primary' }),
-    ],
-  });
-  fragment.appendChild(continueCard);
+  fragment.appendChild(createContinueLearningCard({ continueTarget, hasProgress }));
 
   const readinessCard = createCard({
     title: 'Analyst Capability Dashboard',
@@ -116,6 +112,17 @@ export async function renderDashboard() {
   });
   fragment.appendChild(readinessCard);
 
+  if (nextProject) {
+    const preview = document.createElement('section');
+    preview.className = 'dashboard-project-preview dashboard-section--secondary';
+    preview.innerHTML = '<h2 class="text-lg mb-sm">Next capstone project</h2>';
+    preview.appendChild(createProjectCard(nextProject, projectProgressMap[nextProject.id]));
+    const viewAll = createLinkButton({ label: 'View all projects', href: '#/projects', variant: 'ghost' });
+    viewAll.classList.add('mt-sm');
+    preview.appendChild(viewAll);
+    fragment.appendChild(preview);
+  }
+
   fragment.appendChild(createCard({
     title: 'Northstar Commerce Intelligence',
     subtitle: 'Connected fictional business dataset',
@@ -136,7 +143,7 @@ export async function renderDashboard() {
     fragment.appendChild(createCard({
       title: 'Verified Milestones',
       subtitle: 'Achievements earned from completed progress',
-      className: 'mb-lg',
+      className: 'mb-lg dashboard-section--secondary',
       children: [createAchievementGrid(achievements)],
     }));
   }
@@ -159,7 +166,7 @@ export async function renderDashboard() {
   fragment.appendChild(subjectsSection);
 
   const twoCol = document.createElement('div');
-  twoCol.className = 'grid grid--2';
+  twoCol.className = 'grid grid--2 dashboard-section--secondary';
   twoCol.appendChild(createCard({
     title: 'Recent Analyst Activity',
     children: activity.length
@@ -170,7 +177,7 @@ export async function renderDashboard() {
     title: 'Saved Bookmarks',
     children: bookmarks.length
       ? [createBookmarkList(bookmarks.slice(0, 5))]
-      : [emptyNote('Bookmark lessons for quick access.')],
+      : [emptyNote('No lessons matched your search yet. Bookmark lessons for quick access.')],
   }));
   fragment.appendChild(twoCol);
 
@@ -184,7 +191,7 @@ export async function renderDashboard() {
     .slice(0, 4);
 
   const insightsGrid = document.createElement('div');
-  insightsGrid.className = 'grid grid--2';
+  insightsGrid.className = 'grid grid--2 dashboard-section--secondary';
   insightsGrid.appendChild(createCard({
     title: 'Weak Skills',
     children: weakSkills.length
@@ -201,6 +208,7 @@ export async function renderDashboard() {
 
   fragment.appendChild(createCard({
     title: 'Capstone Projects',
+    className: 'dashboard-section--secondary',
     children: [
       createLinkList(contentBundle.projects.map((p) => ({
         label: p.title,
@@ -214,6 +222,7 @@ export async function renderDashboard() {
   requestAnimationFrame(() => {
     const readinessEl = div.querySelector('.progress-bar-wrap .progress-bar__meta span:last-child');
     if (readinessEl) animateKpiValue(readinessEl, overallProgress, { suffix: '%' });
+    maybeShowWelcomeOnboarding({ continueTarget, hasProgress });
   });
   return div;
 }

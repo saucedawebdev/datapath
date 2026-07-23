@@ -2,6 +2,7 @@ import { createProgressBar } from '../ui.js';
 import { createSubjectIconEl } from './subject-icons.js';
 import { escapeHtml } from '../../utilities/sanitize.js';
 import { findNextLessonInSubject } from '../../services/progress-service.js';
+import { getSubjectTheme } from '../../config/subject-theme.js';
 
 function subjectStatus(completed, total) {
   if (total > 0 && completed >= total) return 'Complete';
@@ -42,9 +43,10 @@ export function createSubjectCapabilityCard({ subject, progress, progressMap }) 
   header.appendChild(title);
   body.appendChild(header);
 
+  const theme = getSubjectTheme(subject.id);
   const desc = document.createElement('p');
   desc.className = 'subject-capability-card__desc';
-  desc.textContent = subject.description;
+  desc.textContent = theme.descriptor || subject.description;
   body.appendChild(desc);
 
   const lessons = document.createElement('p');

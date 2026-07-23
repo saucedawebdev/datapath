@@ -3,6 +3,7 @@ import { storage } from '../../storage/storage-service.js';
 import { searchContent } from '../../services/search-service.js';
 import { createBadge, createEmptyState } from '../../components/ui.js';
 import { debounce } from '../../utilities/helpers.js';
+import { escapeHtml } from '../../utilities/sanitize.js';
 
 export async function renderSearch(query = {}) {
   const container = document.createElement('div');
@@ -16,7 +17,7 @@ export async function renderSearch(query = {}) {
   const input = document.createElement('input');
   input.type = 'search';
   input.className = 'form-input mb-lg';
-  input.placeholder = 'Search…';
+  input.placeholder = 'Search by subject, skill, formula, or topic…';
   input.setAttribute('aria-label', 'Search content');
   input.value = query.q || '';
   input.autofocus = true;
@@ -27,6 +28,18 @@ export async function renderSearch(query = {}) {
 
   container.appendChild(input);
   container.appendChild(resultsEl);
+
+  function highlight(text, term) {
+    if (!term || term.length < 2) return escapeHtml(text);
+    const lower = text.toLowerCase();
+    const t = term.toLowerCase();
+    const idx = lower.indexOf(t);
+    if (idx === -1) return escapeHtml(text);
+    const before = escapeHtml(text.slice(0, idx));
+    const match = escapeHtml(text.slice(idx, idx + term.length));
+    const after = escapeHtml(text.slice(idx + term.length));
+    return `${before}<mark>${match}</mark>${after}`;
+  }
 
   async function doSearch(q) {
     const allProgress = await storage.getAllProgress();
@@ -39,15 +52,15 @@ export async function renderSearch(query = {}) {
 
     if (!q || q.trim().length < 2) {
       resultsEl.appendChild(createEmptyState({
-        message: 'Enter at least 2 characters to search.',
+        message: 'Enter at least 2 characters to search lessons, tools, and skills.',
       }));
       return;
     }
 
     if (!results.length) {
       resultsEl.appendChild(createEmptyState({
-        title: 'No results',
-        message: `No matches for "${q}"`,
+        title: 'No lessons matched your search',
+        message: 'Try a subject name, tool, formula, or skill — for example “JOIN”, “pivot”, or “confidence interval”.',
       }));
       return;
     }
@@ -59,16 +72,20 @@ export async function renderSearch(query = {}) {
       a.setAttribute('role', 'option');
       a.innerHTML = `
         <div class="search-result__meta">
-          <span>${r.type}</span>
-          <span>${r.subjectId?.toUpperCase()}</span>
+          <span>${escapeHtml(r.type)}</span>
+          <span>${escapeHtml(r.subjectId?.toUpperCase() || '')}</span>
           ${r.difficulty ? createBadge(r.difficulty).outerHTML : ''}
           ${r.complete ? createBadge('Complete', 'complete').outerHTML : ''}
-          ${r.bookmarked ? '★' : ''}
+          ${r.bookmarked ? '<span aria-label="Bookmarked">★</span>' : ''}
         </div>
-        <strong>${r.title}</strong>
-        <p class="text-secondary mb-0">${r.context}</p>
+        <strong>${highlight(r.title, q.trim())}</strong>
+        <p class="text-secondary mb-0">${highlight(r.context, q.trim())}</p>
       `;
       a.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          input.focus();
+          return;
+        }
         const items = [...resultsEl.querySelectorAll('.search-result')];
         if (e.key === 'ArrowDown') {
           e.preventDefault();
@@ -76,15 +93,19 @@ export async function renderSearch(query = {}) {
         }
         if (e.key === 'ArrowUp') {
           e.preventDefault();
-          items[Math.max(index - 1, 0)]?.focus();
+          if (index === 0) input.focus();
+          else items[Math.max(index - 1, 0)]?.focus();
         }
       });
       resultsEl.appendChild(a);
     });
   }
 
-  const debouncedSearch = debounce((q) => doSearch(q), 300);
+  const debouncedSearch = debounce((term) => doSearch(term), 300);
   input.addEventListener('input', () => debouncedSearch(input.value));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') input.value = '';
+  });
   await doSearch(input.value);
 
   return container;

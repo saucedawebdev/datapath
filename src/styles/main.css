@@ -4,6 +4,7 @@
 @import './utilities.css';
 @import './analytics-enhancements.css';
 @import './visual-polish.css';
+@import './polish-pass.css';
 
 *, *::before, *::after {
   box-sizing: border-box;

@@ -22,7 +22,19 @@ import { createAnalystBriefingPanel } from '../../components/analyst-briefing.js
 import { createMissionCompletePanel } from '../../components/mission-complete-panel.js';
 import { createCaseFilePanel } from '../../components/case-file.js';
 import { createBusinessImpactPanel } from '../../components/business-impact.js';
+import { getLessonPosition } from '../../content/index.js';
+import { createSubjectIconEl } from '../../components/visual/subject-icons.js';
+import {
+  createWhyThisMattersCallout,
+  createBusinessRequestCallout,
+  createCommonMistakesCallout,
+  createKeyTakeawayPanel,
+  createInterviewQuestionPanel,
+  createJobUseLabel,
+} from '../../components/lesson-callouts.js';
+import { getInterviewPromptForLesson } from '../../config/lesson-interview-prompts.js';
 import { showCompletionCelebration } from '../../components/visual/completion-celebration.js';
+import { debounce } from '../../utilities/helpers.js';
 
 const COMPLETION_STATUS = {
   sql: 'QUERY VALIDATED',
@@ -45,25 +57,40 @@ export async function renderLesson(params, query = {}) {
   const bookmarked = await storage.isBookmarked(lesson.id);
   const note = await storage.getNote(lesson.id);
   const { prev, next } = getAdjacentLessons(lesson.id);
+  const position = getLessonPosition(lesson.id);
+
+  await storage.logLessonView(lesson.id, lesson.subjectId);
 
   const article = document.createElement('article');
   article.className = 'lesson-page';
 
-  article.innerHTML = `
-    <header class="page-header">
-      <p class="text-sm text-muted mb-0">
-        <a href="#/learn">Learn</a> /
-        <a href="#/learn/${lesson.subjectId}">${subject?.name || lesson.subjectId}</a> /
-        ${module?.name || ''}
-      </p>
-      <h1 class="page-header__title">${escapeHtml(lesson.title)}</h1>
-      <div class="flex flex-wrap gap-sm items-center">
-        ${createBadge(lesson.difficulty).outerHTML}
-        <span class="text-sm text-muted">${lesson.estimatedMinutes} min estimated</span>
-        ${progress?.complete ? createBadge('Completed', 'complete').outerHTML : ''}
-      </div>
-    </header>
+  const header = document.createElement('header');
+  header.className = 'lesson-page__header page-header';
+  header.innerHTML = `
+    <p class="text-sm text-muted mb-0">
+      <a href="#/learn">Learn</a> /
+      <a href="#/learn/${lesson.subjectId}">${escapeHtml(subject?.name || lesson.subjectId)}</a> /
+      ${escapeHtml(module?.name || '')}
+    </p>
+    <div class="lesson-page__meta mb-sm">
+      <span class="lesson-page__subject-icon" aria-hidden="true"></span>
+      <span>${escapeHtml(subject?.name || '')}</span>
+      ${position ? `<span>Lesson ${position.index} of ${position.totalInSubject}</span>` : ''}
+      ${lesson.estimatedMinutes ? `<span>~${lesson.estimatedMinutes} min</span>` : ''}
+    </div>
+    <h1 class="page-header__title" tabindex="-1" id="lesson-page-title">${escapeHtml(lesson.title)}</h1>
+    <div class="flex flex-wrap gap-sm items-center">
+      ${createBadge(lesson.difficulty).outerHTML}
+      ${progress?.complete ? createBadge('Completed', 'complete').outerHTML : ''}
+    </div>
   `;
+  header.querySelector('.lesson-page__subject-icon')
+    ?.appendChild(createSubjectIconEl(lesson.subjectId, 'lesson-page__icon'));
+  article.appendChild(header);
+
+  requestAnimationFrame(() => {
+    document.getElementById('lesson-page-title')?.focus({ preventScroll: true });
+  });
 
   const actions = document.createElement('div');
   actions.className = 'flex flex-wrap gap-sm mb-lg';
@@ -119,40 +146,69 @@ export async function renderLesson(params, query = {}) {
   }
 
   const sections = [
-    { title: 'Learning Objectives', content: listHtml(lesson.learningObjectives) },
-    { title: 'Plain-English Explanation', content: p(lesson.plainEnglish) },
-    { title: 'What It Does', content: p(lesson.whatItDoes) },
-    { title: 'Why It Matters', content: p(lesson.whyItMatters) },
-    { title: 'When to Use It', content: p(lesson.whenToUse) },
-    { title: 'Stakeholder Question', content: stakeholderBox(lesson.stakeholderQuestion) },
-    { title: 'Concept Walkthrough', content: p(lesson.walkthrough) },
-    { title: 'Syntax', content: lesson.syntax ? `<pre class="code-block"><code>${escapeHtml(lesson.syntax)}</code></pre>` : '' },
-    { title: 'Component Breakdown', content: breakdownHtml(lesson.componentBreakdown) },
-    { title: 'Sample Input', content: p(lesson.sampleInput) },
-    { title: 'Expected Output', content: p(lesson.expectedOutput) },
-    { title: 'Common Mistakes', content: listHtml(lesson.commonMistakes) },
-    { title: 'Best Practices', content: listHtml(lesson.bestPractices) },
-    { title: 'Guided Example', content: guidedExampleHtml(lesson.guidedExample) },
-    { title: 'Project Connection', content: p(lesson.projectConnection) },
+    { title: 'What you will learn', content: listHtml(lesson.learningObjectives), prose: true },
+    { title: 'Plain-English Explanation', content: p(lesson.plainEnglish), prose: true },
+    { title: 'What It Does', content: p(lesson.whatItDoes), prose: true },
+    { callout: 'why', text: lesson.whyItMatters },
+    { title: 'When to Use It', content: p(lesson.whenToUse), prose: true },
+    { callout: 'business', text: lesson.stakeholderQuestion },
+    { title: 'Concept Walkthrough', content: p(lesson.walkthrough), prose: true },
+    { title: 'Syntax', content: lesson.syntax ? `<pre class="code-block"><code>${escapeHtml(lesson.syntax)}</code></pre>` : '', wide: true },
+    { title: 'Component Breakdown', content: breakdownHtml(lesson.componentBreakdown), wide: true },
+    { title: 'Sample Input', content: p(lesson.sampleInput), prose: true },
+    { title: 'Expected Output', content: p(lesson.expectedOutput), prose: true },
+    { callout: 'mistakes', items: lesson.commonMistakes },
+    { title: 'Best Practices', content: listHtml(lesson.bestPractices), prose: true },
+    { title: 'Guided Example', content: guidedExampleHtml(lesson.guidedExample), wide: true },
+    { title: 'Project Connection', content: p(lesson.projectConnection), prose: true },
     { title: 'Related Lessons', content: relatedLessonsHtml(lesson.relatedConcepts) },
   ];
 
   for (const sec of sections) {
+    if (sec.callout === 'why') {
+      const el = createWhyThisMattersCallout(sec.text);
+      if (el) article.appendChild(el);
+      continue;
+    }
+    if (sec.callout === 'business') {
+      const el = createBusinessRequestCallout(sec.text);
+      if (el) article.appendChild(el);
+      continue;
+    }
+    if (sec.callout === 'mistakes') {
+      const el = createCommonMistakesCallout(sec.items);
+      if (el) article.appendChild(el);
+      continue;
+    }
     if (!sec.content) continue;
-    article.appendChild(createLessonSection(sec.title, sec.content));
+    article.appendChild(createLessonSection(sec.title, sec.content, { prose: sec.prose, wide: sec.wide }));
   }
 
   if (lesson.guidedPractice?.exerciseId) {
     const ex = getExercise(lesson.guidedPractice.exerciseId);
-    if (ex) article.appendChild(await createExerciseSection('Guided Practice', ex, lesson.id));
+    if (ex) {
+      const sec = await createExerciseSection('Guided Practice', ex, lesson.id);
+      sec.prepend(createJobUseLabel());
+      article.appendChild(sec);
+    }
   }
   if (lesson.independentChallenge?.exerciseId) {
     const ex = getExercise(lesson.independentChallenge.exerciseId);
-    if (ex) article.appendChild(await createExerciseSection('Independent Challenge', ex, lesson.id));
+    if (ex) {
+      const sec = await createExerciseSection('Independent Challenge', ex, lesson.id);
+      sec.prepend(createJobUseLabel());
+      article.appendChild(sec);
+    }
   }
   if (lesson.knowledgeCheck?.quizId) {
     article.appendChild(await createQuizSection(lesson.knowledgeCheck.quizId));
   }
+
+  const takeaway = createKeyTakeawayPanel(lesson);
+  if (takeaway) article.appendChild(takeaway);
+
+  const interview = createInterviewQuestionPanel(getInterviewPromptForLesson(lesson));
+  if (interview) article.appendChild(interview);
 
   article.appendChild(createNotesSection(lesson.id, note));
 
@@ -196,10 +252,11 @@ export async function renderLesson(params, query = {}) {
   return article;
 }
 
-function createLessonSection(title, html) {
+function createLessonSection(title, html, { prose = false, wide = false } = {}) {
   const section = document.createElement('section');
-  section.className = 'lesson-section';
-  section.innerHTML = `<h2 class="lesson-section__title">${title}</h2>${html}`;
+  section.className = `lesson-section${wide ? ' lesson-section--wide' : ''}`;
+  const inner = prose ? `<div class="lesson-prose">${html}</div>` : html;
+  section.innerHTML = `<h2 class="lesson-section__title">${title}</h2>${inner}`;
   return section;
 }
 
@@ -305,9 +362,17 @@ async function createQuizSection(quizId) {
     const result = scoreQuiz(quiz.questions, answers);
     await storage.saveQuizAttempt(quizId, quiz.subjectId, result.score, result.total);
     resultsDiv.hidden = false;
+    const pct = Math.round(result.percentage * 100);
+    const feedbackClass = pct >= 80 ? 'quiz-feedback--correct' : 'quiz-feedback--partial';
+    resultsDiv.className = `quiz-feedback ${feedbackClass}`;
+    resultsDiv.setAttribute('role', 'status');
+    resultsDiv.setAttribute('aria-live', 'polite');
     resultsDiv.innerHTML = `
-      <p><strong>Score: ${result.score}/${result.total}</strong> (${Math.round(result.percentage * 100)}%)</p>
-      ${result.results.map((r, i) => `<p>${r.correct ? '✓' : '✗'} ${escapeHtml(quiz.questions[i].explanation)}</p>`).join('')}
+      <p><strong>Score: ${result.score}/${result.total}</strong> (${pct}%)</p>
+      ${result.results.map((r, i) => `
+        <p><strong>${r.correct ? 'Correct' : 'Incorrect'}:</strong> ${escapeHtml(quiz.questions[i].explanation)}</p>
+      `).join('')}
+      <p class="mb-0 text-sm">Review the concept above, then continue to practice or the next lesson.</p>
     `;
     showToast('Quiz submitted', { type: 'success' });
   });
@@ -315,7 +380,7 @@ async function createQuizSection(quizId) {
   quiz.questions.forEach((q, i) => {
     const fieldset = document.createElement('fieldset');
     fieldset.className = 'form-group';
-    fieldset.innerHTML = `<legend class="form-label">${escapeHtml(q.question)}</legend>`;
+    fieldset.innerHTML = `<legend class="form-label">Question ${i + 1}: ${escapeHtml(q.question)}</legend>`;
     q.options.forEach((opt, j) => {
       const label = document.createElement('label');
       label.className = 'flex items-center gap-sm';
@@ -347,17 +412,43 @@ function createNotesSection(lessonId, initialNote) {
   textarea.setAttribute('aria-label', 'Personal notes for this lesson');
   textarea.value = initialNote;
 
+  const status = document.createElement('p');
+  status.className = 'notes-status';
+  status.setAttribute('aria-live', 'polite');
+
+  const saveNote = debounce(async () => {
+    status.textContent = 'Saving…';
+    status.classList.remove('notes-status--error');
+    try {
+      await storage.saveNote(lessonId, textarea.value);
+      status.textContent = 'Saved';
+    } catch {
+      status.textContent = 'Could not save';
+      status.classList.add('notes-status--error');
+    }
+  }, 600);
+
+  textarea.addEventListener('input', saveNote);
+
   const saveBtn = createButton({
     label: 'Save notes',
     variant: 'secondary',
     onClick: async () => {
-      await storage.saveNote(lessonId, textarea.value);
-      showToast('Notes saved', { type: 'success' });
+      status.textContent = 'Saving…';
+      try {
+        await storage.saveNote(lessonId, textarea.value);
+        status.textContent = 'Saved';
+        showToast('Notes saved', { type: 'success' });
+      } catch {
+        status.textContent = 'Could not save';
+        status.classList.add('notes-status--error');
+      }
     },
   });
 
   section.appendChild(textarea);
   section.appendChild(saveBtn);
+  section.appendChild(status);
   return section;
 }
 

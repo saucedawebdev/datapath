@@ -42,6 +42,7 @@ export function createDefaultPreferences() {
     reducedMotion: false,
     learningGoal: 'job-ready',
     dailyTargetMinutes: 30,
+    onboardingCompleted: false,
     updatedAt: new Date().toISOString(),
   };
 }

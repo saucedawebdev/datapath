@@ -1,3 +1,7 @@
+export function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function debounce(fn, delay = 300) {
   let timer;
   return (...args) => {
